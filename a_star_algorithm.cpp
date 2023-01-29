@@ -133,7 +133,7 @@ bool isValid(int row, int col)
 bool isUnBlocked(int grid[][COL], int row, int col)
 {
 	// Returns true if the cell is not blocked else false
-	if (grid[row][col] == 0 ){
+	if (grid[row][col] == 0  || grid[row][col] == 48){
 		return (true);
 	}
 	else{
@@ -200,7 +200,7 @@ void tracePath(cell cellDetails[][COL], Pair dest, Pair src, int prank, int is_i
         grid[dest.first][dest.second]='E';
         for(int i=0;i<ROW;i++){
             for(int j=0;j<COL;j++){
-                if(grid[i][j] == 0 && grid[i][j] != 'x'){
+                if((grid[i][j] == 48 || grid[i][j] == 49 || grid[i][j] == 0 || grid[i][j] == 1) && grid[i][j] != 'x'){
                     grid[i][j] = ' ';
                 }
                 fputc(grid[i][j], fptr);
@@ -639,23 +639,12 @@ int main(int argc, char* argv[])
         }
     }
     //Sequential code
-    if(csize == 1){
-        // Source is the left-most bottom-most corner
-        src = make_pair(bcast_array[0], bcast_array[1]);
-        // Destination is the left-most top-most corner
-        dest = make_pair(bcast_array[2], bcast_array[3]);
-        aStarSearch(grid, src, dest,prank,csize,bcast_array[4]);
-    }
-    if(csize == 2){
-        if(prank==1){
-            // Source is the left-most bottom-most corner
-            src = make_pair(bcast_array[0], bcast_array[1]);
-            // Destination is the left-most top-most corner
-            dest = make_pair(bcast_array[2], bcast_array[3]);
-            aStarSearch(grid, src, dest,prank,csize,bcast_array[4]);
+    if(csize < 3){
+        if((prank==1 && csize == 2) || (csize == 1 && prank == 0)){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim,dim,dim,dim);
         }
     }
-    if(csize == 3){
+    else if(csize == 3){
         if(prank == 1){
             start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,(dim/2)-1,dim-1);
         } 
