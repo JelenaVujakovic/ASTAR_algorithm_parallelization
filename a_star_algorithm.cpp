@@ -53,8 +53,6 @@ struct cell {
     bool foundDest = false;
 
     int* foundFixedPoint = new int;
-
-    int* prank1 = new int;
  
 
 int* findCharacterPos(char* mat, int dim, char c){
@@ -110,7 +108,7 @@ int* loadMat(const char* fname, int dim)
 			}
 			it++;
 			j++;
-			if(j == 10){
+			if(j == COL){
 				j=0;
 				i++;
 			}
@@ -585,8 +583,8 @@ void start_a_star_on_process(int prank, int src_x, int src_y,int dst_x,int dst_y
         dest_fixed_point = make_pair(fixed_dst_x,fixed_dst_y);
     }
     check_validity(src,dest_fixed_point, prank);
-    for(int i = 0;i<5;i++){
-        for(int j=0;j<10;j++){
+    for(int i = 0;i<COL/2;i++){
+        for(int j=0;j<COL;j++){
             subgrid1[i][j] = grid[i][j]; 
         }
     }
@@ -604,10 +602,9 @@ int main(int argc, char* argv[])
     int dim;
     src_dst_matrix = 0;
     
-
-    MPI_Init ( NULL , NULL );
-    MPI_Comm_size ( MPI_COMM_WORLD , & csize );
-    MPI_Comm_rank ( MPI_COMM_WORLD , & prank );
+    MPI_Init (NULL,NULL);
+    MPI_Comm_size (MPI_COMM_WORLD,&csize);
+    MPI_Comm_rank (MPI_COMM_WORLD,&prank);
 
     if(prank == 0)
     {
@@ -616,66 +613,84 @@ int main(int argc, char* argv[])
         bcast_array = loadMat(argv[1], dim);
         bcast_array[5] = dim;
 
-        bcast_array[4] = check_matrix(csize,dim,prank,bcast_array[0],bcast_array[2]);
+        if(csize > 1)
+            bcast_array[4] = check_matrix(csize,dim,prank,bcast_array[0],bcast_array[2]);
     }
     else{
         bcast_array = new int[7];
     }
+    
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(bcast_array,7,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-
     double s = MPI_Wtime();
-    if(csize >= 1 && prank != 0)
-	{
-        int dim = bcast_array[5];
-        *foundFixedPoint = 0;
-        memset(closedList, false, sizeof(closedList));
-        for(int i = 0; i < ROW; i++){
-            for (int j = 0; j < COL; j++) {
-                cellDetails[i][j].f = FLT_MAX;
-                cellDetails[i][j].g = FLT_MAX;
-                cellDetails[i][j].parent_i = -1;
-                cellDetails[i][j].parent_j = -1;
-            }
+
+    dim = bcast_array[5];
+    Pair src;
+    Pair dest;
+    *foundFixedPoint = 0;
+    memset(closedList, false, sizeof(closedList));
+    for(int i = 0; i < ROW; i++){
+        for (int j = 0; j < COL; j++) {
+            cellDetails[i][j].f = FLT_MAX;
+            cellDetails[i][j].g = FLT_MAX;
+            cellDetails[i][j].parent_i = -1;
+            cellDetails[i][j].parent_j = -1;
         }
-        if(csize == 3){
-            if(prank == 1){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,(dim/2)-1,dim-1);
-            } 
-            if(prank == 2){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,dim-1,dim-1);
-            }
-        }else if(csize == 4){
-            if(prank == 1){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
-            }else if(prank == 2){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
-            }else if(prank == 3){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,dim-1,dim-1);
-            }
-        }else if(csize == 5){
-            if(prank == 1){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
-            }else if(prank == 2){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
-            }else if(prank == 3){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,(dim/2)+1,dim-1);
-            }else if(prank == 4){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)+1,dim-1,dim-1,dim-1);
-            }
-        }else if(csize == 6){
-            if(prank == 1){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
-            }else if(prank == 2){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
-            }else if(prank == 3){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,(dim/2)+1,dim-1);
-            }else if(prank == 4){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)+1,dim-1,dim-2,dim-1);
-            }else if(prank == 5){
-                start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim-2,dim-1,dim-1,dim-1);
-            }
+    }
+    //Sequential code
+    if(csize == 1){
+        // Source is the left-most bottom-most corner
+        src = make_pair(bcast_array[0], bcast_array[1]);
+        // Destination is the left-most top-most corner
+        dest = make_pair(bcast_array[2], bcast_array[3]);
+        aStarSearch(grid, src, dest,prank,csize,bcast_array[4]);
+    }
+    if(csize == 2){
+        if(prank==1){
+            // Source is the left-most bottom-most corner
+            src = make_pair(bcast_array[0], bcast_array[1]);
+            // Destination is the left-most top-most corner
+            dest = make_pair(bcast_array[2], bcast_array[3]);
+            aStarSearch(grid, src, dest,prank,csize,bcast_array[4]);
+        }
+    }
+    if(csize == 3){
+        if(prank == 1){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,(dim/2)-1,dim-1);
+        } 
+        if(prank == 2){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,dim-1,dim-1);
+        }
+    }else if(csize == 4){
+        if(prank == 1){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
+        }else if(prank == 2){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
+        }else if(prank == 3){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,dim-1,dim-1);
+        }
+    }else if(csize == 5){
+        if(prank == 1){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
+        }else if(prank == 2){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
+        }else if(prank == 3){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,(dim/2)+1,dim-1);
+        }else if(prank == 4){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)+1,dim-1,dim-1,dim-1);
+        }
+    }else if(csize == 6){
+        if(prank == 1){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,prank-1,prank-1,dim/5,dim-1);
+        }else if(prank == 2){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim/5,dim-1,(dim/2)-1,dim-1);
+        }else if(prank == 3){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)-1,dim-1,(dim/2)+1,dim-1);
+        }else if(prank == 4){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,(dim/2)+1,dim-1,dim-2,dim-1);
+        }else if(prank == 5){
+            start_a_star_on_process(prank,bcast_array[0],bcast_array[1],bcast_array[2],bcast_array[3],bcast_array[4],dim,csize,dim-2,dim-1,dim-1,dim-1);
         }
     }
     double e = MPI_Wtime();
