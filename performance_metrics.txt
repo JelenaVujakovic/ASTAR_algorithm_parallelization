@@ -1,0 +1,3 @@
+Time elapsed: 0.000151	Number of proceses = 1	Input matrix size = 10x10
+Time elapsed: 0.000240	Number of proceses = 1	Input matrix size = 10x10
+Time elapsed: 0.000004	Number of proceses = 6	Input matrix size = 10x10
