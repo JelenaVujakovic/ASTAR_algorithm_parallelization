@@ -7,6 +7,6 @@ clean:
 	rm -f $(ODIR)/*.o a_star_algorithm res.txt
 
 run:
-	mpirun -np 6 ./a_star_algorithm matrix.txt
+	mpirun -np 6 ./a_star_algorithm test/matrix.txt
 show:
 	cat res.txt
